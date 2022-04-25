@@ -78,7 +78,7 @@ class OreDict{
 	 * @return bool
 	 */
 	public function exec($byTag = false, $noFallback = false) {
-		$dbr = wfGetDB(DB_SLAVE);
+		$dbr = wfGetDB(DB_REPLICA);
 
 		// Vars
 		$itemModEscaped = $dbr->addQuotes($this->mItemMod);
@@ -192,7 +192,7 @@ class OreDict{
 	 * @return bool
 	 */
 	static public function entryExists($item, $tag, $mod) {
-		$dbr = wfGetDB(DB_SLAVE);
+		$dbr = wfGetDB(DB_REPLICA);
 
 		$result = $dbr->select(
 			'ext_oredict_items',
@@ -212,7 +212,7 @@ class OreDict{
 	 * @return mixed		See checkExists.
 	 */
 	static public function checkExistsByID($id) {
-		$dbr = wfGetDB(DB_SLAVE);
+		$dbr = wfGetDB(DB_REPLICA);
 		$res = $dbr->select(
 			'ext_oredict_items',
 			array(
