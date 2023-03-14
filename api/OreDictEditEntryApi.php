@@ -1,57 +1,60 @@
 <?php
 
+use Wikimedia\ParamValidator\ParamValidator;
+use Wikimedia\ParamValidator\TypeDef\NumericDef;
+
 class OreDictEditEntryApi extends ApiBase {
     public function __construct($query, $moduleName) {
         parent::__construct($query, $moduleName, 'od');
     }
 
-    public function getAllowedParams() {
+    public function getAllowedParams(): array {
         return array(
             'token' => null,
             'mod' => [
-                ApiBase::PARAM_TYPE => 'string',
+                ParamValidator::PARAM_TYPE => 'string',
             ],
             'tag' => [
-                ApiBase::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_TYPE => 'string',
             ],
             'item' => [
-                ApiBase::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_TYPE => 'string',
             ],
             'params' => [
-                ApiBase::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_TYPE => 'string',
             ],
             'id' => [
-                ApiBase::PARAM_TYPE => 'integer',
-                ApiBase::PARAM_MIN => 1,
-                ApiBase::PARAM_REQUIRED => true,
+				ParamValidator::PARAM_TYPE => 'integer',
+				NumericDef::PARAM_MIN => 1,
+				ParamValidator::PARAM_REQUIRED => true,
             ],
         );
     }
 
-    public function needsToken() {
+    public function needsToken(): string {
         return 'csrf';
     }
 
-    public function getTokenSalt() {
+    public function getTokenSalt(): string {
         return '';
     }
 
-    public function mustBePosted() {
+    public function mustBePosted(): bool {
         return true;
     }
 
-    public function isWriteMode() {
+    public function isWriteMode(): bool {
         return true;
     }
 
-    public function getExamples() {
+    public function getExamples(): array {
         return array(
             'api.php?action=editoredict&odmod=NEWMOD&odid=1',
         );
     }
 
     public function execute() {
-        if (!in_array('editoredict', $this->getUser()->getRights())) {
+		if ( !$this->getUser()->isAllowed( 'editoredict' ) ) {
             $this->dieWithError('You do not have the permission to add OreDict entries', 'permissiondenied');
         }
 
@@ -59,7 +62,6 @@ class OreDictEditEntryApi extends ApiBase {
 
         if (!OreDict::checkExistsByID($id)) {
             $this->dieWithError("Entry $id does not exist", 'entrynotexist');
-            return;
         }
 
         $mod = $this->getParameter('mod');
@@ -83,11 +85,9 @@ class OreDictEditEntryApi extends ApiBase {
             }
             case 1: {
                 $this->dieWithError("Failed to edit $id in the database", 'dbfail');
-                return;
             }
             case 2: {
                 $this->dieWithError("There was no change made for entry $id", 'nodiff');
-                return;
             }
         }
 

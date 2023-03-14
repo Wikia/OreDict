@@ -1,4 +1,7 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+
 /**
  * OreDictList special page file
  *
@@ -26,7 +29,7 @@ class OreDictList extends SpecialPage {
 		return 'oredict';
 	}
 
-	public function execute($par) {
+	public function execute( $subPage ) {
 		global $wgQueryPageDefaultLimit;
 		$out = $this->getOutput();
 		$out->enableOOUI();
@@ -62,7 +65,7 @@ class OreDictList extends SpecialPage {
 		$page = intval($opts->getValue('page'));
 
 		// Load data
-		$dbr = wfGetDB(DB_REPLICA);
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 		$results =  $dbr->select(
 			'ext_oredict_items',
 			'COUNT(`entry_id`) AS row_count',
@@ -85,7 +88,6 @@ class OreDictList extends SpecialPage {
 		}
 
 		$begin = $page * $limit;
-		$end = min($begin + $limit, $maxRows);
 		$order = $start == '' ? 'entry_id ASC' : 'item_name ASC';
 		$results = $dbr->select(
 			'ext_oredict_items',
@@ -111,7 +113,7 @@ class OreDictList extends SpecialPage {
 		$msgItemName = wfMessage('oredict-item-name');
 		$msgModName = wfMessage('oredict-mod-name');
 		$msgGridParams = wfMessage('oredict-grid-params');
-		$canEdit = in_array("editoredict", $this->getUser()->getRights());
+		$canEdit = $this->getUser()->isAllowed( 'editoredict' );
 		$table .= "!";
 		if ($canEdit) {
 			$table .= " !!";

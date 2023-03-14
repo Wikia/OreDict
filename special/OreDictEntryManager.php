@@ -1,4 +1,7 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+
 /**
  * OreDictEntryManager special page file
  *
@@ -20,11 +23,11 @@ class OreDictEntryManager extends SpecialPage {
 	 * @access	protected
 	 * @return	string
 	 */
-	protected function getGroupName() {
+	protected function getGroupName(): string {
 		return 'oredict';
 	}
 
-	public function execute($par) {
+	public function execute( $subPage ) {
 		// Restrict access from unauthorized users
 		$this->checkPermissions();
 
@@ -50,8 +53,8 @@ class OreDictEntryManager extends SpecialPage {
 		$opts->fetchValuesFromRequest( $this->getRequest() );
 
 		// Give precedence to subpage syntax
-		if ( isset($par)) {
-			$opts->setValue( 'entry_id', $par );
+		if ( isset($subPage)) {
+			$opts->setValue( 'entry_id', $subPage );
 		}
 
 		$out->addHtml($this->outputSearchForm());
@@ -60,8 +63,8 @@ class OreDictEntryManager extends SpecialPage {
 			return;
 		}
 		if (($opts->getValue('update') == 1 || $opts->getValue('delete') == 1) && $opts->getValue('entry_id') != -1) {
-			// XSRF prevention
-			if ( !$this->getUser()->matchEditToken( $this->getRequest()->getVal( 'token' ) ) ) {
+			$csrf = $this->getContext()->getCsrfTokenSet();
+			if ( !$csrf->matchToken( 'token' ) ) {
 				return;
 			}
 
@@ -89,7 +92,7 @@ class OreDictEntryManager extends SpecialPage {
 		}
 
 		// Load data
-		$dbr = wfGetDB(DB_REPLICA);
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 		$results = $dbr->select('ext_oredict_items','*',array('entry_id' => $opts->getValue('entry_id')));
 
 		if ($results->numRows() == 0 && $opts->getValue('entry_id') != -1 && $opts->getValue('entry_id') != -2) {
@@ -105,7 +108,7 @@ class OreDictEntryManager extends SpecialPage {
 		}
 	}
 
-	private function createEntry(FormOptions $opts) {
+	private function createEntry(FormOptions $opts): bool|int {
 		$item = $opts->getValue('item_name');
 		$tag = $opts->getValue('tag_name');
 		$mod = $opts->getValue('mod_name');
@@ -127,8 +130,8 @@ class OreDictEntryManager extends SpecialPage {
 	 * 					Returns the integer returned by OreDict#editEntry denoting success of the update. This is
 	 * 					actually useful.
 	 */
-	private function updateEntry(FormOptions $opts) {
-		$dbw = wfGetDB(DB_MASTER);
+	private function updateEntry(FormOptions $opts): bool|int {
+		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 		$entryId = intval($opts->getValue('entry_id'));
 		$stuff = $dbw->select('ext_oredict_items', '*', array('entry_id' => $entryId));
 		$ary = array(
@@ -204,7 +207,7 @@ class OreDictEntryManager extends SpecialPage {
                 'attribs' => ['disabled' => $vEntryId == -1],
                 'iconElement' => 'remove'
             ])
-            ->addHIddenField('token', $this->getUser()->getEditToken())
+            ->addHIddenField('token', $this->getContext()->getCsrfTokenSet()->getToken() )
             ->setMethod('get')
             ->addHiddenField('update', 1)
             ->setWrapperLegendMsg($msgFieldsetMain)

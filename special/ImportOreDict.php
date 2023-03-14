@@ -1,4 +1,7 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+
 /**
  * ImportOreDict special page file
  *
@@ -20,16 +23,14 @@ class ImportOreDict extends SpecialPage {
 	/**
 	 * Returns the category under which this special page will be grouped on Special:SpecialPages
 	 */
-	protected function getGroupName() {
+	protected function getGroupName(): string {
 		return 'oredict';
 	}
 
 	/**
 	 * Build special page
-	 *
-	 * @param null|string $par Subpage name
 	 */
-	public function execute($par) {
+	public function execute($subPage) {
 		// Restrict access from unauthorized users
 		$this->checkPermissions();
 
@@ -58,7 +59,7 @@ class ImportOreDict extends SpecialPage {
 			}
 
 			$out->addHtml('<tt>');
-			$dbw = wfGetDB(DB_MASTER);
+			$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 
 			$input = explode("\n", trim($opts->getValue('input')));
 
@@ -136,16 +137,15 @@ class ImportOreDict extends SpecialPage {
 
 						$dbw->update('ext_oredict_items', array('grid_params' => $params), array('item_name' => $itemName, 'tag_name' => $tagName, 'mod_name' => $modName));
 						$out->addHTML($this->returnMessage(true, wfMessage('oredict-import-success-update')->text()));
-						continue;
 					} else {
 						// Otherwise display error
 						$out->addHTML($this->returnMessage(false, wfMessage('oredict-import-fail-exists')->text()));
-						continue;
 					}
+					continue;
 				}
 				// Add entry
 				$result = OreDict::addEntry($modName, $itemName, $tagName, $this->getUser(), $params);
-				if ($result == false) {
+				if ( !$result ) {
 					$out->addHTML($this->returnMessage(false, wfMessage('oredict-import-fail-insert')->text()));
 					continue;
 				}
@@ -199,7 +199,7 @@ class ImportOreDict extends SpecialPage {
 	 * @param string $message Message to display
 	 * @return string
 	 */
-	private function returnMessage($state, $message) {
+	private function returnMessage( bool $state, string $message): string {
 		if ($state) {
 			$bgColor = 'green';
 			$resultMsg = wfMessage('oredict-import-success')->text();

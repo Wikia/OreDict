@@ -1,4 +1,9 @@
 <?php
+
+use MediaWiki\Hook\EditPage__showEditForm_initialHook;
+use MediaWiki\Hook\ParserFirstCallInitHook;
+use MediaWiki\Installer\Hook\LoadExtensionSchemaUpdatesHook;
+
 /**
  * OreDict hooks file
  * Defines entry points to the extension
@@ -10,15 +15,17 @@
  * @license
  */
 
-class OreDictHooks {
+class OreDictHooks implements
+	ParserFirstCallInitHook,
+	EditPage__showEditForm_initialHook,
+	LoadExtensionSchemaUpdatesHook
+{
+
 	/**
-	 * Setups and Modifies Database Information
-	 *
-	 * @access	public
-	 * @param	object	DatabaseUpdater Object
-	 * @return	boolean	true
+	 * @param DatabaseUpdater $updater
+	 * @return bool
 	 */
-	public static function SchemaUpdate($updater) {
+	public function onLoadExtensionSchemaUpdates( $updater ): bool {
 		$extDir = __DIR__;
 		$updater->addExtensionUpdate(['addTable', 'ext_oredict_items', "{$extDir}/install/sql/ext_oredict_items.sql", true]);
 		$updater->addExtensionUpdate(['dropField', 'ext_oredict_items', 'flags', "{$extDir}/upgrade/sql/remove_flags.sql", true]);
@@ -31,7 +38,7 @@ class OreDictHooks {
 	 * @param Parser $parser
 	 * @return bool
 	 */
-	public static function SetupParser(Parser &$parser) {
+	public function onParserFirstCallInit( $parser ): bool {
 		$parser->setFunctionHook('dict', 'OreDictHooks::RenderParser');
 		$parser->setFunctionHook('grid_foreach', 'OreDictHooks::RenderMultiple');
 		return true;
@@ -43,7 +50,7 @@ class OreDictHooks {
 	 * @param Parser $parser
 	 * @return array|string
 	 */
-	public static function RenderMultiple(Parser &$parser) {
+	public static function RenderMultiple(Parser &$parser): array|string {
 		$opts = array();
 		for ($i = 1; $i < func_num_args(); $i++) {
 			$opts[] = func_get_arg($i);
@@ -51,14 +58,14 @@ class OreDictHooks {
 
 		// Check if input is in the correct format
 		foreach ($opts as $opt) {
-			if (strpos("{{", $opt) !== false || strpos("}}", $opt) !== false) {
+			if ( str_contains( "{{", $opt ) || str_contains( "}}", $opt ) ) {
 				OreDictError::error(wfMessage('oredict-grid_foreach-format-error')->text());
 				return "";
 			}
 		}
 
 		// Check if separated by commas
-		if (strpos($opts[0], ',') !== false) {
+		if ( str_contains( $opts[0], ',' ) ) {
 			$opts = explode(',', $opts[0]);
 		}
 
@@ -74,7 +81,7 @@ class OreDictHooks {
 		// Prepare items
 		$items = array();
 		foreach ($opts as $option) {
-			if (strpos($option, '=>') === false) {
+			if ( !str_contains( $option, '=>' ) ) {
 				// Pre-load global params
 				$items[] = $gParams;
 				end($items);
@@ -127,7 +134,7 @@ class OreDictHooks {
 	 * @param Parser $parser
 	 * @return array
 	 */
-	public static function RenderParser(Parser &$parser) {
+	public static function RenderParser(Parser &$parser): array {
 		$opts = array();
 		for ($i = 1; $i < func_num_args(); $i++) {
 			$opts[] = func_get_arg($i);
@@ -151,7 +158,7 @@ class OreDictHooks {
 	 * @param array $opts
 	 * @return array|bool
 	 */
-	public static function ExtractOptions($opts) {
+	public static function ExtractOptions( array $opts): bool|array {
 		if (count($opts) == 0) return array();
 		foreach ($opts as $key => $option) {
 			$pair = explode('=', $option);
@@ -164,7 +171,7 @@ class OreDictHooks {
 			}
 		}
 
-		return isset($results) ? $results : false;
+		return $results ?? false;
 	}
 
 	/**
@@ -173,7 +180,7 @@ class OreDictHooks {
 	 * @param string $params
 	 * @return array
 	 */
-	public static function ParseParamString($params) {
+	public static function ParseParamString( string $params ): bool|array {
 		if ($params === "") {
 			return [];
 		}
@@ -187,7 +194,7 @@ class OreDictHooks {
 	 * @return string
 	 */
 
-	public static function BuildParamString($params) {
+	public static function BuildParamString( array $params ): string {
 		foreach ($params as $key => $value) {
 			$pairs[] = "$key=$value";
 		}
@@ -200,16 +207,16 @@ class OreDictHooks {
 	/**
 	 * Entry point for the EditPage::showEditForm:initial hook, allows the oredict extension to modify the edit form. Displays errors on preview.
 	 *
-	 * @param EditPage $editPage
+	 * @param EditPage $editor
 	 * @param OutputPage $out
 	 * @return bool
 	 */
-	public static function OutputWarnings(EditPage &$editPage, OutputPage &$out) {
+	public function onEditPage__showEditForm_initial( $editor, $out ): bool {
 		global $wgOreDictDebug;
 
 		// Output errors
-		$errors = new OreDictError($wgOreDictDebug);
-		$editPage->editFormTextAfterWarn .= $errors->output();
+		$errors = new OreDictError( $wgOreDictDebug );
+		$editor->editFormTextAfterWarn .= $errors->output();
 
 		return true;
 	}
