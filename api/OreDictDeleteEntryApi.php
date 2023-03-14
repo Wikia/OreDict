@@ -1,47 +1,50 @@
 <?php
 
+use Wikimedia\ParamValidator\ParamValidator;
+use Wikimedia\ParamValidator\TypeDef\NumericDef;
+
 class OreDictDeleteEntryApi extends ApiBase {
     public function __construct($query, $moduleName) {
         parent::__construct($query, $moduleName, 'od');
     }
 
-    public function getAllowedParams() {
+    public function getAllowedParams(): array {
         return array(
             'ids' => array(
-                ApiBase::PARAM_TYPE => 'integer',
-                ApiBase::PARAM_ISMULTI => true,
-                ApiBase::PARAM_ALLOW_DUPLICATES => false,
-                ApiBase::PARAM_MIN => 1,
-                ApiBase::PARAM_REQUIRED => true,
+				ParamValidator::PARAM_TYPE => 'integer',
+				ParamValidator::PARAM_ISMULTI => true,
+				ParamValidator::PARAM_ALLOW_DUPLICATES => false,
+				NumericDef::PARAM_MIN => 1,
+				ParamValidator::PARAM_REQUIRED => true,
             ),
             'token' => null,
         );
     }
 
-    public function needsToken() {
+    public function needsToken(): string {
         return 'csrf';
     }
 
-    public function getTokenSalt() {
+    public function getTokenSalt(): string {
         return '';
     }
 
-    public function mustBePosted() {
+    public function mustBePosted(): bool {
         return true;
     }
 
-    public function isWriteMode() {
+    public function isWriteMode(): bool {
         return true;
     }
 
-    public function getExamples() {
+    public function getExamples(): array {
         return array(
             'api.php?action=deleteoredict&odids=1|2|3',
         );
     }
 
     public function execute() {
-        if (!in_array('editoredict', $this->getUser()->getRights())) {
+		if ( !$this->getUser()->isAllowed( 'editoredict' ) ) {
             $this->dieWithError('You do not have the permission to add OreDict entries', 'permissiondenied');
         }
         $entryIds = $this->getParameter('ids');

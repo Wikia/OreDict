@@ -1,4 +1,7 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+
 /**
  * OreDict main file
  *
@@ -10,20 +13,17 @@
  */
 
 class OreDict{
-	private $mOutputLimit;
-	private $mItemName;
-	private $mItemMod;
-	private $mRawArray;
+	private int $mOutputLimit;
+	private string $mItemName;
+	private string $mItemMod;
+	private array $mRawArray;
 
-	static private $mQueries;
+	static private array $mQueries;
 
 	/**
 	 * Init properties.
-	 *
-	 * @param string $itemName
-	 * @param string $itemMod
 	 */
-	public function __construct($itemName, $itemMod = '') {
+	public function __construct( string $itemName, string $itemMod = '' ) {
 		$this->mItemName = $itemName;
 		$this->mOutputLimit = 20;
 		$this->mItemMod = $itemMod;
@@ -31,21 +31,17 @@ class OreDict{
 
 	/**
 	 * Change the output limit of the query.
-	 *
-	 * @param int $limit
 	 */
 
-	public function setOutputLimit($limit) {
+	public function setOutputLimit( int $limit ): void {
 		$this->mOutputLimit = $limit;
 	}
 
 	/**
 	 * Output a list of item names.
-	 *
-	 * @return array
 	 */
 
-	public function getRawOutput() {
+	public function getRawOutput(): array {
 		$out = "";
 		foreach ($this->mRawArray as $item) {
 			if (is_object($item)) {
@@ -59,26 +55,21 @@ class OreDict{
 
 	/**
 	 * Execute output hooks and returns their output.
-	 *
-	 * @param string $params
-	 * @return array
 	 */
 
-	public function runHooks($params = "") {
+	public function runHooks($params = ""): array {
+		$hooks = MediaWikiServices::getInstance()->getHookContainer();
+
 		$out = "";
-		Hooks::run("OreDictOutput", array(&$out, $this->mRawArray, $params));
+		$hooks->run("OreDictOutput", array(&$out, $this->mRawArray, $params));
 		return array($out, 'noparse' => false, 'isHTML' => false);
 	}
 
 	/**
 	 * Queries the OreDict table
-	 *
-	 * @param bool $byTag
-	 * @param bool $noFallback
-	 * @return bool
 	 */
-	public function exec($byTag = false, $noFallback = false) {
-		$dbr = wfGetDB(DB_REPLICA);
+	public function exec($byTag = false, $noFallback = false): bool {
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 
 		// Vars
 		$itemModEscaped = $dbr->addQuotes($this->mItemMod);
@@ -137,8 +128,6 @@ class OreDict{
 					]
 				);
 			}
-			//OreDictError::query($query);
-			//$result = $dbr->query($query);
 			foreach ($result as $row) {
 				self::$mQueries[$this->mItemName][$this->mItemMod][] = new OreDictItem($row);
 			}
@@ -167,12 +156,9 @@ class OreDict{
 
 	/**
 	 * Shuffles an associated array.
-	 *
-	 * @param array $array
-	 * @return bool
 	 */
 
-	static public function shuffleAssocArray(&$array) {
+	static public function shuffleAssocArray( array &$array ): bool {
 		$keys = array_keys($array);
 		shuffle($keys);
 		foreach ($keys as $key) {
@@ -185,14 +171,8 @@ class OreDict{
 		return true;
 	}
 
-	/**
-	 * @param string $item
-	 * @param string $tag
-	 * @param string $mod
-	 * @return bool
-	 */
-	static public function entryExists($item, $tag, $mod) {
-		$dbr = wfGetDB(DB_REPLICA);
+	static public function entryExists( string $item, string $tag, string $mod ) : bool {
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 
 		$result = $dbr->select(
 			'ext_oredict_items',
@@ -208,11 +188,11 @@ class OreDict{
 	}
 
 	/**
-	 * @param $id	Int		The entry ID
-	 * @return mixed		See checkExists.
+	 * @param $id int The entry ID
+	 * @return bool See checkExists.
 	 */
-	static public function checkExistsByID($id) {
-		$dbr = wfGetDB(DB_REPLICA);
+	static public function checkExistsByID( int $id): bool {
+		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
 		$res = $dbr->select(
 			'ext_oredict_items',
 			array(
@@ -229,12 +209,12 @@ class OreDict{
 
 	/**
 	 * Deletes the entry by its ID, and logs it as the user.
-	 * @param $id	Int		The entry ID
-	 * @param $user User	The user
-	 * @return mixed		The first deletion.
+	 * @param $id    Int        The entry ID
+	 * @param $user User    The user
+	 * @return bool        The first deletion.
 	 */
-	static public function deleteEntry($id, $user) {
-		$dbw = wfGetDB(DB_MASTER);
+	static public function deleteEntry( int $id, User $user): bool {
+		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 		$res = $dbw->select('ext_oredict_items', array('tag_name', 'item_name', 'mod_name'), array('entry_id' => $id));
 		$row = $res->current();
 		$tag = $row->tag_name;
@@ -266,12 +246,18 @@ class OreDict{
 	 * @param string $params Grid parameters
 	 * @return bool|int False if it failed to add, or the new ID.
 	 */
-	static public function addEntry($mod, $name, $tag, $user, $params = '') {
+	static public function addEntry(
+		string $mod,
+		string $name,
+		string $tag,
+		User $user,
+		string $params = ''
+	): bool|int {
 		if (!self::isStrValid($mod) || !self::isStrValid($name) || !self::isStrValid($tag)) {
 			return false;
 		}
 
-		$dbw = wfGetDB(DB_MASTER);
+		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 
 		$result = $dbw->insert(
 			'ext_oredict_items',
@@ -284,7 +270,7 @@ class OreDict{
 			__METHOD__
 		);
 
-		if ($result == false) {
+		if ( !$result ) {
 			return false;
 		}
 
@@ -322,20 +308,20 @@ class OreDict{
 	 * @param $str string The string to check
 	 * @return bool Whether this string is non-empty and does not contain invalid values.
 	 */
-	public static function isStrValid($str) {
+	public static function isStrValid( string $str ): bool {
 		return !empty($str) && Title::newFromText($str) !== null;
 	}
 
 	/**
 	 * Edits an entry based on the data given in the first parameter.
-	 * @param $update	array	An array essentially identical to a row. This contains the new data.
-	 * @param $id		Int		The entry ID.
-	 * @param $user		User	The user performing this edit.
+	 * @param $update    array    An array essentially identical to a row. This contains the new data.
+	 * @param $id        Int        The entry ID.
+	 * @param $user        User    The user performing this edit.
 	 * @return int				1 if the update query failed, 2 if there was no change, or 0 if successful.
 	 * @throws MWException		See Database#query.
 	 */
-	static public function editEntry($update, $id, $user) {
-		$dbw = wfGetDB(DB_MASTER);
+	static public function editEntry( array $update, int $id, User $user): int {
+		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
 		$stuff = $dbw->select(
 			'ext_oredict_items',
 			array('*'),
@@ -366,7 +352,7 @@ class OreDict{
 			__METHOD__
 		);
 
-		if ($result == false) {
+		if ( !$result ) {
 			return 1;
 		}
 
@@ -414,10 +400,10 @@ class OreDict{
 	}
 
 	/**
-	 * @param $row ?		The row to get the data from.
-	 * @return array		An array containing the tag, mod, item, and grid params for use throughout the API.
+	 * @param $row stdClass | null The row to get the data from.
+	 * @return array An array containing the tag, mod, item, and grid params for use throughout the API.
 	 */
-	static public function getArrayFromRow($row) {
+	static public function getArrayFromRow( ?stdClass $row ): array {
 		return array(
 			'tag_name' => $row->tag_name,
 			'mod_name' => $row->mod_name,
@@ -429,22 +415,13 @@ class OreDict{
 }
 
 class OreDictItem{
-	private $mTagName;
-	private $mItemName;
-	private $mItemMod;
-	private $mItemParams;
+	private string $mTagName;
+	private stdClass|string $mItemName;
+	private string $mItemMod;
+	private array|bool $mItemParams;
 	private $mId;
 
-	/**
-	 * Contsructor, inits properties
-	 *
-	 * @param string|stdClass $item
-	 * @param string $tag
-	 * @param string $mod
-	 * @param string $params
-	 * @throws MWException Throws and MWException when input format is incorrect.
-	 */
-	public function __construct($item, $tag = '', $mod = '', $params = '') {
+	public function __construct( string|stdClass $item, string $tag = '', string $mod = '', string $params = '' ) {
 		OreDictError::debug(wfMessage('oredictitem-constructor-debug')->text());
 		if (is_object($item))
 			if (get_class($item) == "stdClass") {
@@ -485,12 +462,9 @@ class OreDictItem{
 
 	/**
 	 * Helper function that rejoins and overwrites the default parameters provided in the OreDict.
-	 *
-	 * @param string $params
-	 * @param bool $override
 	 */
 
-	public function joinParams($params, $override = false) {
+	public function joinParams( string $params, bool $override = false ): void {
 		OreDictError::debug(wfMessage('oredictitem-join-debug')->params($params));
 		$input = OreDictHooks::ParseParamString($params);
 		foreach ($input as $key => $value) {
@@ -503,62 +477,30 @@ class OreDictItem{
 		$this->setMainParams();
 	}
 
-	/**
-	 * Sets the value of a parameter.
-	 *
-	 * @param string $name
-	 * @param string $value
-	 */
-
-	public function setParam($name, $value) {
+	public function setParam( string $name, string $value): void {
 		$this->mItemParams[$name] = $value;
 	}
 
-	/**
-	 * Removes item from parameter list.
-	 *
-	 * @param string $name
-	 */
-
-	public function unsetParam($name) {
+	public function unsetParam( string $name ): void {
 		if (isset($this->mItemParams[$name])) unset($this->mItemParams[$name]);
 	}
 
-	/**
-	 * @return mixed
-	 */
 	public function getMod() { return $this->mItemMod; }
 
-	/**
-	 * @return mixed
-	 */
-	public function getItem() { return $this->mItemName; }
+	public function getItem(): mixed { return $this->mItemName; }
 
-	/**
-	 * @return mixed
-	 */
 	public function getItemName() { return $this->mItemName; }
 
-	/**
-	 * @return mixed
-	 */
 	public function getName() { return $this->mItemName; }
 
-	/**
-	 * Sets parameters that are not to be overwritten, is called every time join params is called.
-	 */
-
-	public function setMainParams() {
+	public function setMainParams(): void {
 		$this->mItemParams[1] = $this->mItemName;
 		$this->mItemParams['mod'] = $this->mItemMod;
 		$this->mItemParams['ore-dict-name'] = $this->mTagName;
 	}
 
-	/**
-	 * @return string
-	 */
 
-	public function getParamString() {
+	public function getParamString(): string {
 		return OreDictHooks::BuildParamString($this->mItemParams);
 	}
 }
@@ -581,7 +523,7 @@ class OreDictError{
 	 * @return string
 	 */
 
-	public function output() {
+	public function output(): string {
 		if (!isset(self::$mDebug)) return "";
 
 		$colors = array(
@@ -621,29 +563,18 @@ class OreDictError{
 		return $html;
 	}
 
-	/**
-	 * @param $message
-	 * @param string $type
-	 */
-
-	public static function debug($message, $type = "log") {
+	public static function debug( $message, string $type = "log"): void {
 		self::$mDebug[] = array($type, $message);
 	}
 
-	/**
-	 * @param $message
-	 */
 
-	public static function deprecated($message) {
+	public static function deprecated($message): void {
 		MWDebug::deprecated("(OreDict) ".$message);
 		self::debug($message, "deprecated");
 	}
 
-	/**
-	 * @param $query
-	 */
 
-	public static function query($query) {
+	public static function query($query): void {
 		global $wgShowSQLErrors;
 
 		// Hide queries if debug option is not set in LocalSettings.php
@@ -651,38 +582,22 @@ class OreDictError{
 			self::debug($query, "query");
 	}
 
-	/**
-	 * @param $message
-	 */
-
-	public static function log($message) {
+	public static function log($message): void {
 		MWDebug::log("(OreDict) ".$message);
 		self::debug($message);
 	}
 
-	/**
-	 * @param $message
-	 */
-
-	public static function warn($message) {
+	public static function warn($message): void {
 		MWDebug::warning("(OreDict) ".$message);
 		self::debug($message, "warning");
 	}
 
-	/**
-	 * @param $message
-	 */
-
-	public static function error($message) {
+	public static function error($message): void {
 		MWDebug::warning("(OreDict) "."Error: ".$message);
 		self::debug($message, "error");
 	}
 
-	/**
-	 * @param $message
-	 */
-
-	public static function notice($message) {
+	public static function notice($message): void {
 		MWDebug::warning("(OreDict) "."Notice: ".$message);
 		self::debug($message, "notice");
 	}
