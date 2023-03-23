@@ -17,9 +17,24 @@
 		}
 	},
 	"SpecialPages": {
-		"OreDictEntryManager": "OreDictEntryManager",
-		"OreDictList": "OreDictList",
-		"ImportOreDict": "ImportOreDict"
+		"OreDictEntryManager": {
+			"class": "OreDictEntryManager",
+			"services": [
+				"DBLoadBalancer"
+			]
+		},
+		"OreDictList": {
+			"class": "OreDictList",
+			"services": [
+				"DBLoadBalancer"
+			]
+		},
+		"ImportOreDict": {
+			"class": "ImportOreDict",
+			"services": [
+				"DBLoadBalancer"
+			]
+		}
 	},
 	"LogTypes": [
 		"oredict"

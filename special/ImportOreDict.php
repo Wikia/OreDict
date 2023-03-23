@@ -1,6 +1,6 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
+use Wikimedia\Rdbms\ILoadBalancer;
 
 /**
  * ImportOreDict special page file
@@ -16,7 +16,7 @@ class ImportOreDict extends SpecialPage {
 	/**
 	 * Calls parent constructor and sets special page title
 	 */
-	public function __construct() {
+	public function __construct( private ILoadBalancer $loadBalancer ) {
 		parent::__construct('ImportOreDict', 'importoredict');
 	}
 
@@ -54,12 +54,13 @@ class ImportOreDict extends SpecialPage {
 		// Process and save POST data
 		if ($_POST) {
 			// XSRF prevention
-			if ( !$this->getUser()->matchEditToken( $this->getRequest()->getVal( 'wpEditToken' ) ) ) {
+			$csrf = $this->getContext()->getCsrfTokenSet();
+			if ( !$csrf->matchToken( 'wpEditToken' ) ) {
 				return;
 			}
 
 			$out->addHtml('<tt>');
-			$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
+			$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
 
 			$input = explode("\n", trim($opts->getValue('input')));
 

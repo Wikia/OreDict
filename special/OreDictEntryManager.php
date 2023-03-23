@@ -1,6 +1,6 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
+use Wikimedia\Rdbms\ILoadBalancer;
 
 /**
  * OreDictEntryManager special page file
@@ -13,7 +13,7 @@ use MediaWiki\MediaWikiServices;
  */
 
 class OreDictEntryManager extends SpecialPage {
-	public function __construct() {
+	public function __construct( private ILoadBalancer $loadBalancer ) {
 		parent::__construct('OreDictEntryManager', 'editoredict');
 	}
 
@@ -92,7 +92,7 @@ class OreDictEntryManager extends SpecialPage {
 		}
 
 		// Load data
-		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
 		$results = $dbr->select('ext_oredict_items','*',array('entry_id' => $opts->getValue('entry_id')));
 
 		if ($results->numRows() == 0 && $opts->getValue('entry_id') != -1 && $opts->getValue('entry_id') != -2) {
@@ -131,7 +131,7 @@ class OreDictEntryManager extends SpecialPage {
 	 * 					actually useful.
 	 */
 	private function updateEntry(FormOptions $opts): bool|int {
-		$dbw = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_PRIMARY );
+		$dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
 		$entryId = intval($opts->getValue('entry_id'));
 		$stuff = $dbw->select('ext_oredict_items', '*', array('entry_id' => $entryId));
 		$ary = array(

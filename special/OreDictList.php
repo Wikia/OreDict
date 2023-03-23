@@ -1,6 +1,6 @@
 <?php
 
-use MediaWiki\MediaWikiServices;
+use Wikimedia\Rdbms\ILoadBalancer;
 
 /**
  * OreDictList special page file
@@ -15,7 +15,7 @@ use MediaWiki\MediaWikiServices;
 class OreDictList extends SpecialPage {
 	protected $opts;
 
-	public function __construct() {
+	public function __construct( private ILoadBalancer $loadBalancer ) {
 		parent::__construct('OreDictList');
 	}
 
@@ -65,7 +65,7 @@ class OreDictList extends SpecialPage {
 		$page = intval($opts->getValue('page'));
 
 		// Load data
-		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+		$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
 		$results =  $dbr->select(
 			'ext_oredict_items',
 			'COUNT(`entry_id`) AS row_count',
