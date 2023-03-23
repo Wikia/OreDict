@@ -1,56 +1,58 @@
 <?php
 
+use Wikimedia\ParamValidator\ParamValidator;
+
 class OreDictAddEntryApi extends ApiBase {
     public function __construct($query, $moduleName) {
         parent::__construct($query, $moduleName, 'od');
     }
 
-    public function getAllowedParams() {
+    public function getAllowedParams(): array {
         return array(
             'mod' => array(
-                ApiBase::PARAM_TYPE => 'string',
-                ApiBase::PARAM_REQUIRED => true,
+               ParamValidator::PARAM_TYPE => 'string',
+			   ParamValidator::PARAM_REQUIRED => true,
             ),
             'tag' => array(
-                ApiBase::PARAM_TYPE => 'string',
-                ApiBase::PARAM_REQUIRED => true,
+				ParamValidator::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_REQUIRED => true,
             ),
             'item' => array(
-                ApiBase::PARAM_TYPE => 'string',
-                ApiBase::PARAM_REQUIRED => true,
+				ParamValidator::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_REQUIRED => true,
             ),
             'params' => array(
-                ApiBase::PARAM_TYPE => 'string',
-                ApiBase::PARAM_DFLT => '',
+				ParamValidator::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_DEFAULT => '',
             ),
             'token' => null,
         );
     }
 
-    public function needsToken() {
+    public function needsToken(): string {
         return 'csrf';
     }
 
-    public function getTokenSalt() {
+    public function getTokenSalt(): string {
         return '';
     }
 
-    public function mustBePosted() {
+    public function mustBePosted(): bool {
         return true;
     }
 
-    public function isWriteMode() {
+    public function isWriteMode(): bool {
         return true;
     }
 
-    public function getExamples() {
+    public function getExamples(): array {
         return array(
             'api.php?action=neworedict&odmod=V&odtag=logWood&oditem=Oak Wood Log',
         );
     }
 
     public function execute() {
-        if (!in_array('editoredict', $this->getUser()->getRights())) {
+        if ( !$this->getUser()->isAllowed( 'editoredict' ) ) {
             $this->dieWithError('You do not have the permission to add OreDict entries', 'permissiondenied');
         }
 

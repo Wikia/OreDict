@@ -17,9 +17,24 @@
 		}
 	},
 	"SpecialPages": {
-		"OreDictEntryManager": "OreDictEntryManager",
-		"OreDictList": "OreDictList",
-		"ImportOreDict": "ImportOreDict"
+		"OreDictEntryManager": {
+			"class": "OreDictEntryManager",
+			"services": [
+				"DBLoadBalancer"
+			]
+		},
+		"OreDictList": {
+			"class": "OreDictList",
+			"services": [
+				"DBLoadBalancer"
+			]
+		},
+		"ImportOreDict": {
+			"class": "ImportOreDict",
+			"services": [
+				"DBLoadBalancer"
+			]
+		}
 	},
 	"LogTypes": [
 		"oredict"
@@ -76,16 +91,15 @@
 		"localBasePath": "",
 		"remoteExtPath": "OreDict"
 	},
+	"HookHandlers": {
+		"main": {
+			"class": "OreDictHooks"
+		}
+	},
 	"Hooks": {
-		"ParserFirstCallInit": [
-			"OreDictHooks::SetupParser"
-		],
-		"EditPage::showEditForm:initial": [
-			"OreDictHooks::OutputWarnings"
-		],
-		"LoadExtensionSchemaUpdates": [
-			"OreDictHooks::SchemaUpdate"
-		]
+		"ParserFirstCallInit": "main",
+		"EditPage::showEditForm:initial": "main",
+		"LoadExtensionSchemaUpdates": "main"
 	},
 	"config": {
 		"OreDictDebug": false
